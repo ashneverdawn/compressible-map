@@ -4,7 +4,32 @@ A hash map that allows compressing the least recently used values. Useful when y
 lot of large values in memory. You must define your own compression method for the value type using
 the `Compressible` and `Decompressible` traits.
 
-## Example: Multithreaded Decompression and Access
+## Example: Single-threaded Compression and Access
+
+```rust
+fn main() {
+    // Using the "bincode_lz4" feature to compress any serializable types.
+    let compression_level = 10;
+    let mut map = CompressibleMap::new_bincode_lz4(compression_level);
+
+    for i in 0..100 {
+        map.insert(i, BigValue::new());
+    }
+
+    // Save some memory by compressing half of the values.
+    for _ in 0..50 {
+        map.compress_lru();
+    }
+
+    // Read some values, some are already cached and some will be decompressed
+    // into the cache.
+    for i in 25..75 {
+        map.get(i);
+    }
+}
+```
+
+## Example: Multi-threaded Decompression and Access
 
 ```rust
 use crossbeam::{channel, thread};
