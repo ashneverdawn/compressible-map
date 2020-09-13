@@ -148,7 +148,6 @@ where
         for (key, access) in local_cache.into_iter() {
             match access {
                 LocalAccess::Cached => {
-                    // None value means there was a cached access
                     self.cache.get(&key);
                 }
                 LocalAccess::Missed(value) => {
