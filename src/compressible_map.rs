@@ -152,9 +152,6 @@ where
                     self.cache.get(&key);
                 }
                 LocalAccess::Missed(value) => {
-                    // SAFE: Because this method is `&mut self`, and the only other references to
-                    // value are `&V`, we know they must be dropped before this point, and we are
-                    // safe to unpin the value.
                     self.insert(key, value);
                 }
             }
