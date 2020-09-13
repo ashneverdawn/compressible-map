@@ -3,7 +3,7 @@ use crate::{Compressible, Decompressible};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 /// A fast and portable compression scheme for use with the `CompressibleMap`.
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct BincodeLz4 {
     pub level: u32,
 }
