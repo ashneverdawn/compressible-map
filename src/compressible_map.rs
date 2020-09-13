@@ -22,8 +22,8 @@ pub trait Decompressible<A> {
 // PERF: we could probably reuse compressed values if the decompressed value doesn't get modified
 
 /// A hash map that allows compressing the least recently used values. Useful when you need to store
-/// a lot of large values in memory. You must define your own compression function for the value
-/// type using the `Compressible` and `Decompressible` traits.
+/// a lot of large values in memory. You must define your own compression method for the value type
+/// using the `Compressible` and `Decompressible` traits.
 ///
 /// Call the `compress_lru` method to compress the least recently used value. The most recently used
 /// values will stay uncompressed in a cache.
@@ -351,11 +351,15 @@ mod tests {
             }
         })
         .unwrap();
+
+        map.flush_local_cache(local_cache);
+
+        assert_eq!(map.len_cached(), 100);
     }
 
     #[test]
     fn multithreaded_decompression() {
-        use crossbeam::thread;
+        use crossbeam::{channel, thread};
 
         // Populate the map.
         let mut map = CompressibleMap::<_, _, _>::new(());
@@ -370,24 +374,46 @@ mod tests {
 
         // Note that we can't share a local cache among threads, but we **can** share the map!
         let map_ref = &map;
-
-        thread::scope(|s| {
-            for i in 0..100 {
-                s.spawn(move |_| {
-                    let local_cache = LocalCache::new();
-                    if i < 50 {
-                        // These got compressed and decompressed.
-                        assert_eq!(
-                            map_ref.get_const(i, &local_cache),
-                            Some(&Foo((i + 2) as u32))
-                        )
-                    } else {
-                        // These stayed cached.
-                        assert_eq!(map_ref.get_const(i, &local_cache), Some(&Foo(i as u32)))
-                    }
-                });
+        let (tx, rx) = channel::unbounded();
+        {
+            let mut txs = Vec::new();
+            for _ in 0..99 {
+                txs.push(tx.clone());
             }
-        })
-        .unwrap();
+            txs.push(tx);
+            let txs_ref = &txs;
+
+            thread::scope(|s| {
+                for i in 0..100 {
+                    s.spawn(move |_| {
+                        let local_cache = LocalCache::new();
+                        if i < 50 {
+                            // These got compressed and decompressed.
+                            assert_eq!(
+                                map_ref.get_const(i, &local_cache),
+                                Some(&Foo((i + 2) as u32))
+                            )
+                        } else {
+                            // These stayed cached.
+                            assert_eq!(map_ref.get_const(i, &local_cache), Some(&Foo(i as u32)))
+                        }
+
+                        txs_ref[i as usize].send(local_cache).unwrap();
+                    });
+                }
+            })
+            .unwrap();
+        }
+
+        loop {
+            match rx.recv() {
+                Ok(cache) => map.flush_local_cache(cache),
+                Err(_) => {
+                    break;
+                }
+            }
+        }
+
+        assert_eq!(map.len_cached(), 100);
     }
 }
