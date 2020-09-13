@@ -1,23 +1,14 @@
 use crate::{
     local_cache::{LocalAccess, LocalCache},
     lru_cache::{EntryState, LruCache},
+    Compressible, Decompressible,
 };
+
+#[cfg(feature = "bincode_lz4")]
+use crate::BincodeLz4;
 
 use std::collections::{hash_map::RandomState, HashMap};
 use std::hash::{BuildHasher, Hash};
-
-/// A type that's compressible using algorithm `A`.
-pub trait Compressible<A> {
-    type Compressed: Decompressible<A>;
-
-    fn compress(&self, params: A) -> Self::Compressed;
-}
-
-pub trait Decompressible<A> {
-    type Decompressed: Compressible<A>;
-
-    fn decompress(&self) -> Self::Decompressed;
-}
 
 // PERF: we could probably reuse compressed values if the decompressed value doesn't get modified
 
@@ -42,6 +33,22 @@ where
     cache: LruCache<K, V, H>,
     compressed: HashMap<K, <V as Compressible<A>>::Compressed, H>,
     compression_params: A,
+}
+
+#[cfg(feature = "bincode_lz4")]
+impl<K, V, H> CompressibleMap<K, V, BincodeLz4, H>
+where
+    K: Clone + Eq + Hash,
+    V: Compressible<BincodeLz4>,
+    H: BuildHasher + Default,
+{
+    pub fn new_bincode_lz4(level: u32) -> Self {
+        Self {
+            cache: LruCache::default(),
+            compressed: HashMap::default(),
+            compression_params: BincodeLz4 { level },
+        }
+    }
 }
 
 impl<K, V, Vc, H, A> CompressibleMap<K, V, A, H>
