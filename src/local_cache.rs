@@ -55,8 +55,7 @@ where
     //   1. Once a value is placed here, it will never get dropped or moved until calling
     //      `into_iter`.
     //   2. The values are placed into `Pin<Box<V>>` so the memory address is guaranteed stable.
-    //   3. Returned references are all immutable, so they must be dropped before calling
-    //      `into_iter`.
+    //   3. Returned references must be dropped before calling `into_iter`.
 
     pub fn remember_cached_access(&self, key: K) {
         let mut_accesses = unsafe { &mut *self.accesses.get() };
