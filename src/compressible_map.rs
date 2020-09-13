@@ -148,9 +148,12 @@ where
         for (key, access) in local_cache.into_iter() {
             match access {
                 LocalAccess::Cached => {
+                    // We accessed this key and it was cached, so let's reflect that in the cache's
+                    // LRU order.
                     self.cache.get(&key);
                 }
                 LocalAccess::Missed(value) => {
+                    // We accessed this key and it was missed, so let's repopulate the cache.
                     self.insert(key, value);
                 }
             }
