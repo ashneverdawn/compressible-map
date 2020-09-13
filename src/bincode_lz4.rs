@@ -1,6 +1,6 @@
 use crate::{Compressible, Decompressible};
 
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 /// A fast and portable compression scheme for use with the `CompressibleMap`.
 #[derive(Clone)]
@@ -8,6 +8,7 @@ pub struct BincodeLz4 {
     pub level: u32,
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct BincodeLz4Compressed<T> {
     pub compressed_bytes: Vec<u8>,
     marker: std::marker::PhantomData<T>,
