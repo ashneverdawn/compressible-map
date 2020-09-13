@@ -1,0 +1,8 @@
+[package]
+name = "compressible-map"
+version = "0.1.0"
+authors = ["Duncan Fairbanks <bonsairobo@gmail.com>"]
+edition = "2018"
+
+[dev-dependencies]
+crossbeam = "0.7"
