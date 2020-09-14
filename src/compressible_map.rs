@@ -205,7 +205,7 @@ where
     where
         Vc: 'a,
     {
-        self.cache.keys().chain(self.compressed.keys())
+        self.cache.keys()
     }
 
     /// Iterate over all (key, value) pairs, but compressed values will not be decompressed inline.
@@ -279,6 +279,20 @@ mod tests {
 
         assert_eq!(map.len_cached(), 1);
         assert_eq!(map.len_compressed(), 0);
+    }
+
+    #[test]
+    fn keys_iterator_has_both_cached_and_compressed() {
+        let mut map = CompressibleMap::<_, _, _>::new(());
+
+        map.insert(1, Foo(0));
+        map.insert(2, Foo(0));
+
+        map.compress_lru();
+
+        let mut keys: Vec<i32> = map.keys().cloned().collect();
+        keys.sort();
+        assert_eq!(keys, vec![1, 2]);
     }
 
     #[test]
