@@ -1,8 +1,9 @@
 # Compressible Map
 
 A hash map that allows compressing the least recently used values. Useful when you need to store a
-lot of large values in memory. You must define your own compression method for the value type using
-the `Compressible` and `Decompressible` traits.
+lot of large values in memory. You can either use the "bincode_lz4" feature to get a default
+compression algorithm for serializable values, or define your own compression method for the value
+type using the `Compressible` and `Decompressible` traits.
 
 ## Example: Single-threaded Compression and Access
 
