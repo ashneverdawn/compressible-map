@@ -152,16 +152,25 @@ where
 
     /// Updates the cache and it's approximate LRU order.
     pub fn flush_local_cache(&mut self, local_cache: LocalCache<K, V, H>) {
+        let CompressibleMap {
+            cache, compressed, ..
+        } = self;
         for (key, access) in local_cache.into_iter() {
             match access {
                 LocalAccess::Cached => {
                     // We accessed this key and it was cached, so let's reflect that in the cache's
                     // LRU order.
-                    self.cache.get(&key);
+                    cache.get(&key);
                 }
                 LocalAccess::Missed(value) => {
-                    // We accessed this key and it was missed, so let's repopulate the cache.
-                    self.insert(key, value);
+                    // We accessed this key and it was missed, so let's repopulate the cache. Don't
+                    // replace a value that's already in the cache, since it might be newer than
+                    // what we're trying to flush (which must have come from a read).
+                    cache.get_or_repopulate_with(key.clone(), || {
+                        compressed.remove(&key);
+
+                        value
+                    });
                 }
             }
         }
