@@ -150,7 +150,9 @@ where
         })
     }
 
-    /// Updates the cache and it's approximate LRU order.
+    /// Updates the cache and it's approximate LRU order after calling `get_const` some number of
+    /// times. WARNING/TODO: There is currently no mechanism to prevent overwriting newer compressed
+    /// data with old data from a local cache.
     pub fn flush_local_cache(&mut self, local_cache: LocalCache<K, V, H>) {
         let CompressibleMap {
             cache, compressed, ..
