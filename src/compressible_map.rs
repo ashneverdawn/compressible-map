@@ -31,7 +31,7 @@ where
     V: Compressible<A>,
 {
     cache: LruCache<K, V, H>,
-    compressed: HashMap<K, <V as Compressible<A>>::Compressed, H>,
+    compressed: HashMap<K, V::Compressed, H>,
     compression_params: A,
 }
 
@@ -223,7 +223,7 @@ where
     /// Does not affect the cache.
     pub fn iter_maybe_compressed<'a>(
         &'a self,
-    ) -> impl Iterator<Item = (&K, MaybeCompressed<&V, &<V as Compressible<A>>::Compressed>)>
+    ) -> impl Iterator<Item = (&K, MaybeCompressed<&V, &V::Compressed>)>
     where
         Vc: 'a,
     {
