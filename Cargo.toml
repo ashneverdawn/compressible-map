@@ -3,6 +3,7 @@ name = "compressible-map"
 version = "0.1.0"
 edition = "2018"
 authors = ["Duncan Fairbanks <bonsairobo@gmail.com>"]
+description = "A hash map that allows compressing the least recently used values."
 license = "MIT"
 repository = "https://github.com/bonsairobo/compressible-map"
 keywords = ["voxel"]
