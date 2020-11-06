@@ -236,6 +236,17 @@ where
                     .map(|(k, v)| (k, MaybeCompressed::Compressed(v))),
             )
     }
+
+    pub fn into_iter(self) -> impl Iterator<Item = (K, MaybeCompressed<V, V::Compressed>)> {
+        self.cache
+            .into_iter()
+            .map(|(k, v)| (k, MaybeCompressed::Decompressed(v)))
+            .chain(
+                self.compressed
+                    .into_iter()
+                    .map(|(k, v)| (k, MaybeCompressed::Compressed(v))),
+            )
+    }
 }
 
 pub enum MaybeCompressed<D, C> {

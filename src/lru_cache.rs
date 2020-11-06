@@ -254,6 +254,16 @@ where
             .iter()
             .filter_map(move |(k, e)| e.some_if_cached().map(|i| (k, &self.order.get(i).1)))
     }
+
+    pub fn into_iter(self) -> impl Iterator<Item = (K, V)> {
+        let LruCache {
+            store, mut order, ..
+        } = self;
+
+        store
+            .into_iter()
+            .filter_map(move |(k, e)| e.some_if_cached().map(|i| (k, order.remove(i).1)))
+    }
 }
 
 /// Doubly-linked list using Vec as storage.
