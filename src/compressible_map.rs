@@ -10,8 +10,6 @@ use crate::BincodeLz4;
 use std::collections::{hash_map::RandomState, HashMap};
 use std::hash::{BuildHasher, Hash};
 
-// PERF: we could probably reuse compressed values if the decompressed value doesn't get modified
-
 /// A hash map that allows compressing the least recently used values. Useful when you need to store
 /// a lot of large values in memory. You must define your own compression method for the value type
 /// using the `Compressible` and `Decompressible` traits.
@@ -63,6 +61,17 @@ where
         Self {
             cache: LruCache::default(),
             compressed: HashMap::default(),
+            compression_params,
+        }
+    }
+
+    pub fn from_all_compressed(
+        compression_params: A,
+        compressed: HashMap<K, V::Compressed, H>,
+    ) -> Self {
+        Self {
+            cache: LruCache::default(),
+            compressed,
             compression_params,
         }
     }
