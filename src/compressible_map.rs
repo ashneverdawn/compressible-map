@@ -69,8 +69,13 @@ where
         compression_params: A,
         compressed: HashMap<K, V::Compressed, H>,
     ) -> Self {
+        let mut cache = LruCache::<K, V, H>::default();
+        for key in compressed.keys() {
+            cache.evict(key.clone());
+        }
+
         Self {
-            cache: LruCache::default(),
+            cache,
             compressed,
             compression_params,
         }

@@ -200,6 +200,22 @@ where
         })
     }
 
+    /// Evicts a specific `key`. This will leave a sentinel behind so that further accesses will
+    /// return `Some(EntryState::Evicted)` until the key is removed or a new entry is inserted.
+    pub fn evict(&mut self, key: K) -> Option<EntryState<V>> {
+        self.num_evicted += 1;
+        self.store
+            .insert(key, EntryState::Evicted)
+            .map(|entry| match entry {
+                EntryState::Cached(index) => EntryState::Cached(self.order.remove(index).1),
+                EntryState::Evicted => {
+                    self.num_evicted -= 1;
+
+                    EntryState::Evicted
+                }
+            })
+    }
+
     /// Evicts the least-recently used value. This will leave a sentinel behind so that further
     /// accesses will return `Some(EntryState::Evicted)` until the key is removed or a new entry is
     /// inserted.
