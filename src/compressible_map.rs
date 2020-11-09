@@ -146,7 +146,7 @@ where
     /// multiple values at once. Call `flush_local_cache` to update the "global" cache with
     /// the local cache.
     pub fn get_const<'a>(&'a self, key: K, local_cache: &'a LocalCache<K, V, H>) -> Option<&'a V> {
-        self.cache.get_const(&key).map(move |entry| {
+        self.cache.get_const(&key).map(|entry| {
             match entry {
                 EntryState::Cached(v) => {
                     // For the sake of updating LRU order when we flush this local cache.
@@ -161,6 +161,20 @@ where
                     })
                 }
             }
+        })
+    }
+
+    /// Returns a copy of the value at `key`, which may involve decompression.
+    /// WARNING: the cache will not be updated. This is useful for read-modify-write scenarios where
+    /// you would just insert the modified value back into the map, which defeats the purpose of
+    /// caching it on read.
+    pub fn get_copy_without_caching(&self, key: K) -> Option<V>
+    where
+        V: Clone,
+    {
+        self.cache.get_const(&key).map(|entry| match entry {
+            EntryState::Cached(v) => v.clone(),
+            EntryState::Evicted => self.compressed.get(&key).unwrap().decompress(),
         })
     }
 
