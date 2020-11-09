@@ -168,13 +168,13 @@ where
     /// WARNING: the cache will not be updated. This is useful for read-modify-write scenarios where
     /// you would just insert the modified value back into the map, which defeats the purpose of
     /// caching it on read.
-    pub fn get_copy_without_caching(&self, key: K) -> Option<V>
+    pub fn get_copy_without_caching(&self, key: &K) -> Option<V>
     where
         V: Clone,
     {
-        self.cache.get_const(&key).map(|entry| match entry {
+        self.cache.get_const(key).map(|entry| match entry {
             EntryState::Cached(v) => v.clone(),
-            EntryState::Evicted => self.compressed.get(&key).unwrap().decompress(),
+            EntryState::Evicted => self.compressed.get(key).unwrap().decompress(),
         })
     }
 
