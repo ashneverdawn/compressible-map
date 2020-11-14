@@ -90,6 +90,24 @@ where
         self.compressed.remove(&key);
     }
 
+    /// Insert a compressed value, returning any pre-existing entry.
+    pub fn insert_compressed(
+        &mut self,
+        key: K,
+        value: V::Compressed,
+    ) -> Option<MaybeCompressed<V, V::Compressed>> {
+        let old_cached_value = self
+            .cache
+            .evict(key.clone())
+            .map(|e| e.some_if_cached())
+            .flatten();
+
+        self.compressed
+            .insert(key, value)
+            .map(|v| MaybeCompressed::Compressed(v))
+            .or(old_cached_value.map(|v| MaybeCompressed::Decompressed(v)))
+    }
+
     /// Insert a new value and return the old one if it exists, which requires decompressing it.
     pub fn replace(&mut self, key: K, value: V) -> Option<V> {
         self.cache
