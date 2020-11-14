@@ -65,6 +65,10 @@ where
         }
     }
 
+    pub fn compression_params(&self) -> &A {
+        &self.compression_params
+    }
+
     pub fn from_all_compressed(
         compression_params: A,
         compressed: HashMap<K, V::Compressed, H>,
