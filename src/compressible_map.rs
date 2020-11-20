@@ -6,6 +6,8 @@ use crate::{
 
 #[cfg(feature = "bincode_lz4")]
 use crate::BincodeLz4;
+#[cfg(feature = "bincode_snappy")]
+use crate::BincodeSnappy;
 
 use std::collections::{hash_map::RandomState, HashMap};
 use std::hash::{BuildHasher, Hash};
@@ -45,6 +47,22 @@ where
             cache: LruCache::default(),
             compressed: HashMap::default(),
             compression_params: BincodeLz4 { level },
+        }
+    }
+}
+
+#[cfg(feature = "bincode_snappy")]
+impl<K, V, H> CompressibleMap<K, V, BincodeSnappy, H>
+where
+    K: Clone + Eq + Hash,
+    V: Compressible<BincodeSnappy>,
+    H: BuildHasher + Default,
+{
+    pub fn new_bincode_snappy() -> Self {
+        Self {
+            cache: LruCache::default(),
+            compressed: HashMap::default(),
+            compression_params: BincodeSnappy,
         }
     }
 }

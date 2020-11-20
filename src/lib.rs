@@ -4,9 +4,13 @@ mod lru_cache;
 
 #[cfg(feature = "bincode_lz4")]
 mod bincode_lz4;
+#[cfg(feature = "bincode_snappy")]
+mod bincode_snappy;
 
 #[cfg(feature = "bincode_lz4")]
 pub use bincode_lz4::{BincodeLz4, BincodeLz4Compressed};
+#[cfg(feature = "bincode_snappy")]
+pub use bincode_snappy::{BincodeSnappy, BincodeSnappyCompressed};
 
 pub use crate::compressible_map::{CompressibleMap, MaybeCompressed};
 pub use local_cache::LocalCache;
