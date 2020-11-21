@@ -1,13 +1,8 @@
 use crate::{
     local_cache::{LocalAccess, LocalCache},
     lru_cache::{EntryState, LruCache},
-    Compressible, Decompressible,
+    Compressed, Compression,
 };
-
-#[cfg(feature = "bincode_lz4")]
-use crate::BincodeLz4;
-#[cfg(feature = "bincode_snappy")]
-use crate::BincodeSnappy;
 
 use std::collections::{hash_map::RandomState, HashMap};
 use std::hash::{BuildHasher, Hash};
@@ -28,52 +23,18 @@ use std::hash::{BuildHasher, Hash};
 /// can be used later to update the cache with `flush_local_cache`.
 pub struct CompressibleMap<K, V, A, H = RandomState>
 where
-    V: Compressible<A>,
+    A: Compression<Data = V>,
 {
     cache: LruCache<K, V, H>,
-    compressed: HashMap<K, V::Compressed, H>,
+    compressed: HashMap<K, Compressed<A>, H>,
     compression_params: A,
 }
 
-#[cfg(feature = "bincode_lz4")]
-impl<K, V, H> CompressibleMap<K, V, BincodeLz4, H>
+impl<K, V, H, A> CompressibleMap<K, V, A, H>
 where
     K: Clone + Eq + Hash,
-    V: Compressible<BincodeLz4>,
     H: BuildHasher + Default,
-{
-    pub fn new_bincode_lz4(level: u32) -> Self {
-        Self {
-            cache: LruCache::default(),
-            compressed: HashMap::default(),
-            compression_params: BincodeLz4 { level },
-        }
-    }
-}
-
-#[cfg(feature = "bincode_snappy")]
-impl<K, V, H> CompressibleMap<K, V, BincodeSnappy, H>
-where
-    K: Clone + Eq + Hash,
-    V: Compressible<BincodeSnappy>,
-    H: BuildHasher + Default,
-{
-    pub fn new_bincode_snappy() -> Self {
-        Self {
-            cache: LruCache::default(),
-            compressed: HashMap::default(),
-            compression_params: BincodeSnappy,
-        }
-    }
-}
-
-impl<K, V, Vc, H, A> CompressibleMap<K, V, A, H>
-where
-    K: Clone + Eq + Hash,
-    V: Compressible<A, Compressed = Vc>,
-    Vc: Decompressible<A, Decompressed = V>,
-    H: BuildHasher + Default,
-    A: Clone,
+    A: Compression<Data = V>,
 {
     pub fn new(compression_params: A) -> Self {
         Self {
@@ -89,7 +50,7 @@ where
 
     pub fn from_all_compressed(
         compression_params: A,
-        compressed: HashMap<K, V::Compressed, H>,
+        compressed: HashMap<K, Compressed<A>, H>,
     ) -> Self {
         let mut cache = LruCache::<K, V, H>::default();
         for key in compressed.keys() {
@@ -116,8 +77,8 @@ where
     pub fn insert_compressed(
         &mut self,
         key: K,
-        value: V::Compressed,
-    ) -> Option<MaybeCompressed<V, V::Compressed>> {
+        value: Compressed<A>,
+    ) -> Option<MaybeCompressed<V, Compressed<A>>> {
         let old_cached_value = self
             .cache
             .evict(key.clone())
@@ -147,7 +108,7 @@ where
     pub fn compress_lru(&mut self) {
         if let Some((lru_key, lru_value)) = self.cache.evict_lru() {
             self.compressed
-                .insert(lru_key, lru_value.compress(self.compression_params.clone()));
+                .insert(lru_key, self.compression_params.compress(&lru_value));
         }
     }
 
@@ -282,7 +243,7 @@ where
 
     pub fn keys<'a>(&'a self) -> impl Iterator<Item = &K>
     where
-        Vc: 'a,
+        Compressed<A>: 'a,
     {
         self.cache.keys()
     }
@@ -291,9 +252,9 @@ where
     /// Does not affect the cache.
     pub fn iter_maybe_compressed<'a>(
         &'a self,
-    ) -> impl Iterator<Item = (&K, MaybeCompressed<&V, &V::Compressed>)>
+    ) -> impl Iterator<Item = (&K, MaybeCompressed<&V, &Compressed<A>>)>
     where
-        Vc: 'a,
+        Compressed<A>: 'a,
     {
         self.cache
             .iter()
@@ -305,7 +266,7 @@ where
             )
     }
 
-    pub fn into_iter(self) -> impl Iterator<Item = (K, MaybeCompressed<V, V::Compressed>)> {
+    pub fn into_iter(self) -> impl Iterator<Item = (K, MaybeCompressed<V, Compressed<A>>)> {
         self.cache
             .into_iter()
             .map(|(k, v)| (k, MaybeCompressed::Decompressed(v)))
@@ -333,30 +294,27 @@ pub enum MaybeCompressed<D, C> {
 mod tests {
     use super::*;
 
-    #[derive(Debug, Default, Eq, PartialEq)]
+    struct FakeFooCompression;
+
+    impl Compression for FakeFooCompression {
+        type Data = Foo;
+        type CompressedData = Foo;
+
+        fn compress(&self, data: &Self::Data) -> Compressed<Self> {
+            Compressed::new(Foo(data.0 + 1))
+        }
+
+        fn decompress(compressed: &Self::CompressedData) -> Self::Data {
+            Foo(compressed.0 + 1)
+        }
+    }
+
+    #[derive(Clone, Debug, Default, Eq, PartialEq)]
     struct Foo(u32);
-
-    struct FooCompressed(u32);
-
-    impl Compressible<()> for Foo {
-        type Compressed = FooCompressed;
-
-        fn compress(&self, _: ()) -> Self::Compressed {
-            FooCompressed(self.0 + 1)
-        }
-    }
-
-    impl Decompressible<()> for FooCompressed {
-        type Decompressed = Foo;
-
-        fn decompress(&self) -> Self::Decompressed {
-            Foo(self.0 + 1)
-        }
-    }
 
     #[test]
     fn get_after_compress() {
-        let mut map = CompressibleMap::<_, _, _>::new(());
+        let mut map = CompressibleMap::<_, _, _>::new(FakeFooCompression);
 
         map.insert(1, Foo(0));
 
@@ -373,7 +331,7 @@ mod tests {
 
     #[test]
     fn keys_iterator_has_both_cached_and_compressed() {
-        let mut map = CompressibleMap::<_, _, _>::new(());
+        let mut map = CompressibleMap::<_, _, _>::new(FakeFooCompression);
 
         map.insert(1, Foo(0));
         map.insert(2, Foo(0));
@@ -388,7 +346,7 @@ mod tests {
     #[test]
     fn flush_after_get_const_populates_cache() {
         // Use a function just to mimic the "global" lifetime of the map.
-        fn do_test_with_global_cache(map: &mut CompressibleMap<i32, Foo, ()>) {
+        fn do_test_with_global_cache(map: &mut CompressibleMap<i32, Foo, FakeFooCompression>) {
             map.insert(1, Foo(0));
             map.insert(2, Foo(1));
 
@@ -421,7 +379,7 @@ mod tests {
             assert_eq!(Some(&Foo(3)), map.get(2));
         }
 
-        let mut map = CompressibleMap::new(());
+        let mut map = CompressibleMap::new(FakeFooCompression);
         do_test_with_global_cache(&mut map);
     }
 
@@ -430,7 +388,7 @@ mod tests {
         use crossbeam::thread;
 
         // Populate the map.
-        let mut map = CompressibleMap::<_, _, _>::new(());
+        let mut map = CompressibleMap::<_, _, _>::new(FakeFooCompression);
         for i in 0..100 {
             map.insert(i, Foo(i));
         }
@@ -472,7 +430,7 @@ mod tests {
         use crossbeam::{channel, thread};
 
         // Populate the map.
-        let mut map = CompressibleMap::<_, _, _>::new(());
+        let mut map = CompressibleMap::<_, _, _>::new(FakeFooCompression);
         for i in 0..100 {
             map.insert(i, Foo(i));
         }
