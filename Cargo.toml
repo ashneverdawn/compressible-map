@@ -6,7 +6,7 @@ authors = ["Duncan Fairbanks <bonsairobo@gmail.com>"]
 description = "A hash map that allows compressing the least recently used values."
 license = "MIT"
 repository = "https://github.com/bonsairobo/compressible-map"
-keywords = ["voxel"]
+keywords = ["compression"]
 
 [features]
 default = []
