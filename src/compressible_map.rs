@@ -288,6 +288,15 @@ pub enum MaybeCompressed<D, C> {
     Compressed(C),
 }
 
+impl<A: Compression> MaybeCompressed<A::Data, Compressed<A>> {
+    pub fn as_decompressed(self) -> A::Data {
+        match self {
+            MaybeCompressed::Compressed(c) => c.decompress(),
+            MaybeCompressed::Decompressed(d) => d,
+        }
+    }
+}
+
 // ████████╗███████╗███████╗████████╗███████╗
 // ╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝██╔════╝
 //    ██║   █████╗  ███████╗   ██║   ███████╗
