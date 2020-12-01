@@ -1,6 +1,6 @@
 [package]
 name = "compressible-map"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2018"
 authors = ["Duncan Fairbanks <bonsairobo@gmail.com>"]
 description = "A hash map that allows compressing the least recently used values."
