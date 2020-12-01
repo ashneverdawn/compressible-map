@@ -96,6 +96,17 @@ where
             .or(old_cached_value.map(|v| MaybeCompressed::Decompressed(v)))
     }
 
+    pub fn insert_maybe_compressed(
+        &mut self,
+        key: K,
+        value: MaybeCompressed<V, Compressed<A>>,
+    ) -> Option<MaybeCompressed<V, Compressed<A>>> {
+        match value {
+            MaybeCompressed::Compressed(c) => self.insert_compressed(key, c),
+            MaybeCompressed::Decompressed(c) => self.insert(key, c),
+        }
+    }
+
     pub fn compress_lru(&mut self) {
         if let Some((lru_key, lru_value)) = self.cache.evict_lru() {
             self.compressed
