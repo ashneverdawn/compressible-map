@@ -1,11 +1,11 @@
-#[cfg(feature = "compressed-bincode")]
+#[cfg(feature = "bincode")]
 mod compressed_bincode;
 #[cfg(feature = "lz4")]
 mod lz4_compression;
 #[cfg(feature = "snap")]
 mod snappy_compression;
 
-#[cfg(feature = "compressed-bincode")]
+#[cfg(feature = "bincode")]
 pub use compressed_bincode::BincodeCompression;
 #[cfg(feature = "lz4")]
 pub use lz4_compression::Lz4;
@@ -23,7 +23,7 @@ pub trait Compression: Sized {
     fn decompress(compressed: &Self::CompressedData) -> Self::Data;
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Compressed<A>
 where
     A: Compression,

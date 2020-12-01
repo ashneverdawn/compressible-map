@@ -11,8 +11,6 @@ keywords = ["compression"]
 [features]
 default = []
 
-compressed-bincode = ["bincode"]
-
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 
@@ -23,3 +21,13 @@ snap = { version = "1.0.3", optional = true }
 
 [dev-dependencies]
 crossbeam = "0.7"
+
+[[example]]
+name = "single_threaded"
+path = "examples/single_threaded.rs"
+required-features = ["bincode", "lz4"]
+
+[[example]]
+name = "multi_threaded"
+path = "examples/multi_threaded.rs"
+required-features = ["bincode", "lz4"]

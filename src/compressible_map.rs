@@ -64,13 +64,18 @@ where
         }
     }
 
-    /// Insert a new value and drop the old one.
-    pub fn insert(&mut self, key: K, value: V) {
-        self.cache.insert(key.clone(), value);
+    /// Insert a new value and return the old one if it exists.
+    pub fn insert(&mut self, key: K, value: V) -> Option<MaybeCompressed<V, Compressed<A>>> {
+        self.cache
+            .insert(key.clone(), value)
+            .map(|old_cache_entry| match old_cache_entry {
+                EntryState::Cached(v) => MaybeCompressed::Decompressed(v),
+                EntryState::Evicted => {
+                    let compressed_value = self.compressed.remove(&key).unwrap();
 
-        // PERF: this might not be necessary, but we need to confirm that the compressed value won't
-        // pop up again somewhere and cause inconsistencies
-        self.compressed.remove(&key);
+                    MaybeCompressed::Compressed(compressed_value)
+                }
+            })
     }
 
     /// Insert a compressed value, returning any pre-existing entry.
@@ -89,20 +94,6 @@ where
             .insert(key, value)
             .map(|v| MaybeCompressed::Compressed(v))
             .or(old_cached_value.map(|v| MaybeCompressed::Decompressed(v)))
-    }
-
-    /// Insert a new value and return the old one if it exists, which requires decompressing it.
-    pub fn replace(&mut self, key: K, value: V) -> Option<V> {
-        self.cache
-            .insert(key.clone(), value)
-            .map(|old_cache_entry| match old_cache_entry {
-                EntryState::Cached(v) => v,
-                EntryState::Evicted => {
-                    let compressed_value = self.compressed.remove(&key).unwrap();
-
-                    compressed_value.decompress()
-                }
-            })
     }
 
     pub fn compress_lru(&mut self) {
@@ -165,17 +156,20 @@ where
         })
     }
 
-    /// Returns a copy of the value at `key`, which may involve decompression.
+    /// Returns a copy of the value at `key`.
     /// WARNING: the cache will not be updated. This is useful for read-modify-write scenarios where
     /// you would just insert the modified value back into the map, which defeats the purpose of
     /// caching it on read.
-    pub fn get_copy_without_caching(&self, key: &K) -> Option<V>
+    pub fn get_copy_without_caching(&self, key: &K) -> Option<MaybeCompressed<V, Compressed<A>>>
     where
         V: Clone,
+        Compressed<A>: Clone,
     {
         self.cache.get_const(key).map(|entry| match entry {
-            EntryState::Cached(v) => v.clone(),
-            EntryState::Evicted => self.compressed.get(key).unwrap().decompress(),
+            EntryState::Cached(v) => MaybeCompressed::Decompressed(v.clone()),
+            EntryState::Evicted => {
+                MaybeCompressed::Compressed(self.compressed.get(key).unwrap().clone())
+            }
         })
     }
 
@@ -212,11 +206,13 @@ where
         self.compressed.remove(key);
     }
 
-    /// Removes the value and returns it if it exists, decompressing it first.
-    pub fn remove(&mut self, key: &K) -> Option<V> {
+    /// Removes the value and returns it if it exists.
+    pub fn remove(&mut self, key: &K) -> Option<MaybeCompressed<V, Compressed<A>>> {
         self.cache.remove(key).map(|entry| match entry {
-            EntryState::Cached(v) => v,
-            EntryState::Evicted => self.compressed.remove(key).unwrap().decompress(),
+            EntryState::Cached(v) => MaybeCompressed::Decompressed(v),
+            EntryState::Evicted => {
+                MaybeCompressed::Compressed(self.compressed.remove(key).unwrap())
+            }
         })
     }
 
@@ -250,9 +246,7 @@ where
 
     /// Iterate over all (key, value) pairs, but compressed values will not be decompressed inline.
     /// Does not affect the cache.
-    pub fn iter_maybe_compressed<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = (&K, MaybeCompressed<&V, &Compressed<A>>)>
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (&K, MaybeCompressed<&V, &Compressed<A>>)>
     where
         Compressed<A>: 'a,
     {
