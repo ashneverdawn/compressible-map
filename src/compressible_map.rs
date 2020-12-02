@@ -295,6 +295,13 @@ impl<A: Compression> MaybeCompressed<A::Data, Compressed<A>> {
             MaybeCompressed::Decompressed(d) => d,
         }
     }
+
+    pub fn unwrap_decompressed(self) -> A::Data {
+        match self {
+            MaybeCompressed::Compressed(_) => panic!("Must be decompressed"),
+            MaybeCompressed::Decompressed(d) => d,
+        }
+    }
 }
 
 // ████████╗███████╗███████╗████████╗███████╗
