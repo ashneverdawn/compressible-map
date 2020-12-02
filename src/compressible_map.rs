@@ -143,6 +143,10 @@ where
         cache.get_or_insert_with(key.clone(), on_evicted, on_missing)
     }
 
+    pub fn insert_if_vacant(&mut self, key: K, value: V) -> &mut V {
+        self.get_or_insert_with(key, || value)
+    }
+
     /// Used for thread-safe access or to borrow multiple values at once. The cache will not be
     /// updated, but accesses will be recorded in the provided `LocalCache`. The interior
     /// mutability of the local cache has a cost (more heap indirection), but it allows us to borrow
