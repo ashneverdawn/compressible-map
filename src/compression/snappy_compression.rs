@@ -2,7 +2,7 @@ use super::BytesCompression;
 
 /// The [Snappy compression algorithm](https://en.wikipedia.org/wiki/Snappy_(compression)).
 /// Uses a pure Rust implementation, making it suitable for use with the WASM target.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Snappy;
 
 impl BytesCompression for Snappy {

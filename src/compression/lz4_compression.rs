@@ -1,7 +1,7 @@
 use super::BytesCompression;
 
 /// The [LZ4 compression algorithm](https://en.wikipedia.org/wiki/LZ4_(compression_algorithm)).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Lz4 {
     /// The compression level, from 0 to 10. 0 is fastest and least aggressive. 10 is slowest and
     /// most aggressive.
