@@ -1,5 +1,7 @@
 use super::BytesCompression;
 
+use serde::{Deserialize, Serialize};
+
 /// The [LZ4 compression algorithm](https://en.wikipedia.org/wiki/LZ4_(compression_algorithm)).
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Lz4 {
